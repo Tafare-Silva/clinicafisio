@@ -1,0 +1,350 @@
+<!-- templates/caixa/registrar_pagamento.html -->
+{% extends 'base.html' %}
+
+{% block title %}Registrar Pagamento - Clínica{% endblock %}
+
+{% block content %}
+<div class="py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-2xl mx-auto">
+        <!-- Header -->
+        <div class="mb-8">
+            <a href="{% url 'dashboard_caixa' %}" class="text-purple-600 hover:text-purple-800 flex items-center gap-2 mb-4">
+                <i class="fas fa-arrow-left"></i>Voltar ao Dashboard
+            </a>
+            <h1 class="text-3xl font-bold text-slate-900">
+                <i class="fas fa-money-bill-wave text-purple-600 mr-3"></i>Registrar Pagamento
+            </h1>
+        </div>
+
+        <!-- Card do Formulário -->
+        <div class="bg-white rounded-lg shadow-lg p-8">
+            <form method="post" class="space-y-6" id="formPagamento" novalidate>
+                {% csrf_token %}
+
+                <!-- Campo de Busca de Mensalidade -->
+                <div>
+                    <label class="block text-sm font-bold text-slate-900 mb-2">
+                        🔍 Buscar Mensalidade por Paciente
+                    </label>
+                    <input
+                        type="text"
+                        id="buscaMensalidade"
+                        placeholder="Digite o nome do paciente..."
+                        class="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-lg"
+                        autocomplete="off"
+                    >
+
+                    <!-- Resultados da Busca -->
+                    <div id="resultadosBusca" class="mt-2 max-h-96 overflow-y-auto hidden border border-slate-200 rounded-lg bg-white shadow-lg"></div>
+
+                    <!-- Campo oculto que vai receber o ID da mensalidade selecionada -->
+                    {{ form.mensalidade.as_hidden }}
+
+                    <!-- Mensagem de erro do JS -->
+                    <div id="erro-mensalidade" class="mt-2 hidden text-sm font-medium text-red-600"></div>
+                </div>
+
+                <!-- Detalhes da Mensalidade Selecionada -->
+                <div id="detalhes-mensalidade" class="hidden">
+                    <div class="bg-blue-50 border-l-4 border-blue-500 p-5 rounded-r-lg">
+                        <h3 class="font-bold text-blue-900 mb-3">📋 Mensalidade Selecionada</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-xs text-blue-700">Paciente</p>
+                                <p class="text-sm font-bold text-blue-900" id="paciente-nome">-</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-blue-700">Serviço</p>
+                                <p class="text-sm font-bold text-blue-900" id="servico-nome">-</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-blue-700">Valor da Mensalidade</p>
+                                <p class="text-sm font-bold text-green-600" id="mensalidade-valor">R$ 0,00</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-blue-700">Vencimento</p>
+                                <p class="text-sm font-bold text-blue-900" id="mensalidade-vencimento">-</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Valor Pago -->
+                <div>
+                    <label for="id_valor_pago" class="block text-sm font-bold text-slate-900 mb-2">
+                        💵 Valor Recebido (R$)
+                    </label>
+                    {{ form.valor_pago }}
+
+                    <!-- Alerta de Diferença -->
+                    <div id="alerta-diferenca" class="mt-3 hidden"></div>
+
+                    <!-- Checkbox para Ajustar Próxima -->
+                    <div id="div-ajustar-proxima" class="mt-3 hidden">
+                        <label class="flex items-center cursor-pointer bg-yellow-50 border border-yellow-300 rounded-lg p-3">
+                            {{ form.ajustar_proxima }}
+                            <span class="ml-2 text-sm font-medium text-yellow-900">
+                                <i class="fas fa-exchange-alt mr-1"></i>
+                                <span id="texto-ajuste">Ajustar diferença na próxima mensalidade</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Método de Pagamento -->
+                <div>
+                    <label class="block text-sm font-bold text-slate-900 mb-2">
+                        Método de Pagamento
+                    </label>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {% for value, label in form.metodo_pagamento.field.choices %}
+                            <label class="relative flex items-center cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="metodo_pagamento"
+                                    value="{{ value }}"
+                                    class="sr-only peer"
+                                    {% if form.metodo_pagamento.value == value %}checked{% endif %}
+                                >
+                                <div class="w-full px-4 py-3 border-2 border-slate-300 rounded-lg peer-checked:border-purple-600 peer-checked:bg-purple-50 transition text-center font-medium text-slate-700 peer-checked:text-purple-600">
+                                    {% if value == 'dinheiro' %}
+                                        <i class="fas fa-money-bill mr-2"></i>
+                                    {% elif value == 'credito' %}
+                                        <i class="fas fa-credit-card mr-2"></i>
+                                    {% elif value == 'debito' %}
+                                        <i class="fas fa-credit-card mr-2"></i>
+                                    {% elif value == 'transferencia' %}
+                                        <i class="fas fa-exchange-alt mr-2"></i>
+                                    {% elif value == 'cheque' %}
+                                        <i class="fas fa-file-invoice mr-2"></i>
+                                    {% elif value == 'pix' %}
+                                        <i class="fas fa-qrcode mr-2"></i>
+                                    {% endif %}
+                                    {{ label }}
+                                </div>
+                            </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Observações -->
+                <div>
+                    <label for="{{ form.observacoes.id_for_label }}" class="block text-sm font-bold text-slate-900 mb-2">
+                        Observações (Opcional)
+                    </label>
+                    {{ form.observacoes }}
+                </div>
+
+                <!-- Botões -->
+                <div class="flex gap-4 pt-4">
+                    <button type="submit" class="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:shadow-lg transition font-bold flex items-center justify-center gap-2">
+                        <i class="fas fa-check-circle"></i>Registrar Pagamento
+                    </button>
+                    <a href="{% url 'dashboard_caixa' %}" class="flex-1 px-6 py-3 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300 transition font-bold flex items-center justify-center gap-2">
+                        <i class="fas fa-times-circle"></i>Cancelar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Dados das mensalidades (corrigido: for usa "mensalidades" e valor vira número JS válido)
+const mensalidades = {
+    {% for m in mensalidades %}
+    "{{ m.id }}": {
+        paciente: "{{ m.paciente.nome|escapejs }}",
+        servico: "{{ m.servico.nome|escapejs }}",
+        valor: parseFloat("{{ m.valor|stringformat:'0.2f' }}"),
+        vencimento: "{{ m.data_vencimento|date:'d/m/Y' }}",
+        status: "{{ m.status }}"
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+};
+
+// Array para busca
+const mensalidadesArray = Object.entries(mensalidades).map(([id, data]) => ({
+    id: String(id),
+    ...data
+}));
+
+// Elementos
+const formPagamento = document.getElementById('formPagamento');
+const buscaInput = document.getElementById('buscaMensalidade');
+const resultadosDiv = document.getElementById('resultadosBusca');
+const selectMensalidade = document.getElementById('id_mensalidade');
+const detalhesDiv = document.getElementById('detalhes-mensalidade');
+const valorPagoInput = document.getElementById('id_valor_pago');
+const alertaDiferenca = document.getElementById('alerta-diferenca');
+const divAjustarProxima = document.getElementById('div-ajustar-proxima');
+const textoAjuste = document.getElementById('texto-ajuste');
+const erroMensalidadeDiv = document.getElementById('erro-mensalidade');
+
+let mensalidadeSelecionada = null;
+let permitirSubmit = false;
+
+function mostrarErroMensalidade(msg) {
+    erroMensalidadeDiv.textContent = msg;
+    erroMensalidadeDiv.classList.remove('hidden');
+}
+
+function limparErroMensalidade() {
+    erroMensalidadeDiv.textContent = '';
+    erroMensalidadeDiv.classList.add('hidden');
+}
+
+// Busca em tempo real (digitação)
+buscaInput.addEventListener('input', function() {
+    limparErroMensalidade();
+
+    const termo = this.value.toLowerCase().trim();
+
+    if (termo.length < 2) {
+        resultadosDiv.classList.add('hidden');
+        resultadosDiv.innerHTML = '';
+        return;
+    }
+
+    const resultados = mensalidadesArray.filter(m =>
+        (m.paciente || '').toLowerCase().includes(termo)
+    );
+
+    if (resultados.length === 0) {
+        resultadosDiv.innerHTML = '<div class="p-4 text-slate-500 text-center">Nenhuma mensalidade encontrada</div>';
+        resultadosDiv.classList.remove('hidden');
+        return;
+    }
+
+    let html = '';
+    resultados.forEach(m => {
+        const statusClass = m.status === 'vencida' ? 'border-red-500' : 'border-yellow-500';
+        const statusText  = m.status === 'vencida' ? 'text-red-600' : 'text-yellow-600';
+
+        html += `
+            <div class="p-4 border-b border-l-4 ${statusClass} hover:bg-slate-50 cursor-pointer transition"
+                 onclick="selecionarMensalidade('${m.id}')">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="font-bold text-slate-900">${m.paciente}</p>
+                        <p class="text-sm text-slate-600">${m.servico} - Vence em ${m.vencimento}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-bold text-green-600">R$ ${Number(m.valor).toFixed(2)}</p>
+                        <p class="text-xs ${statusText} font-semibold">${String(m.status).toUpperCase()}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    resultadosDiv.innerHTML = html;
+    resultadosDiv.classList.remove('hidden');
+});
+
+// Enter: não submeter o form; selecionar o primeiro resultado (se existir)
+buscaInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+
+        const primeiro = resultadosDiv.querySelector('[onclick^="selecionarMensalidade"]');
+        if (primeiro) {
+            primeiro.click();
+        }
+    }
+});
+
+// Selecionar mensalidade
+function selecionarMensalidade(id) {
+    const m = mensalidades[id];
+    if (!m) return;
+
+    limparErroMensalidade();
+    mensalidadeSelecionada = { id, ...m };
+
+    // Preencher detalhes
+    document.getElementById('paciente-nome').textContent = m.paciente;
+    document.getElementById('servico-nome').textContent = m.servico;
+    document.getElementById('mensalidade-valor').textContent = 'R$ ' + Number(m.valor).toFixed(2);
+    document.getElementById('mensalidade-vencimento').textContent = m.vencimento;
+
+    // Preencher valor automaticamente
+    valorPagoInput.value = Number(m.valor).toFixed(2);
+
+    // Atualizar campo oculto com o ID
+    selectMensalidade.value = String(id);
+
+    // Atualizar campo de busca
+    buscaInput.value = m.paciente + ' - ' + m.servico;
+
+    // Mostrar detalhes e esconder resultados
+    detalhesDiv.classList.remove('hidden');
+    resultadosDiv.classList.add('hidden');
+
+    // Verificar diferença
+    verificarDiferenca();
+}
+
+// Verificar diferença de valor
+valorPagoInput.addEventListener('input', verificarDiferenca);
+
+function verificarDiferenca() {
+    if (!mensalidadeSelecionada) return;
+
+    const valorMensalidade = Number(mensalidadeSelecionada.valor) || 0;
+    const valorPago = parseFloat(valorPagoInput.value) || 0;
+    const diferenca = valorPago - valorMensalidade;
+
+    if (Math.abs(diferenca) > 0.01) {
+        if (diferenca > 0) {
+            alertaDiferenca.className = 'mt-3 bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg';
+            alertaDiferenca.innerHTML = `
+                <p class="text-sm text-blue-900">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    <strong>Valor maior que a mensalidade!</strong> Diferença de <strong>R$ ${diferenca.toFixed(2)}</strong> a favor do paciente.
+                </p>
+            `;
+            textoAjuste.textContent = `Abater R$ ${diferenca.toFixed(2)} da próxima mensalidade`;
+        } else {
+            alertaDiferenca.className = 'mt-3 bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg';
+            alertaDiferenca.innerHTML = `
+                <p class="text-sm text-yellow-900">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    <strong>Valor menor que a mensalidade!</strong> Faltam <strong>R$ ${Math.abs(diferenca).toFixed(2)}</strong>.
+                </p>
+            `;
+            textoAjuste.textContent = `Adicionar R$ ${Math.abs(diferenca).toFixed(2)} na próxima mensalidade`;
+        }
+        alertaDiferenca.classList.remove('hidden');
+        divAjustarProxima.classList.remove('hidden');
+    } else {
+        alertaDiferenca.classList.add('hidden');
+        divAjustarProxima.classList.add('hidden');
+    }
+}
+
+// Evitar erro de validação do browser e validar via JS
+formPagamento.addEventListener('submit', function(e) {
+    if (permitirSubmit) return;
+
+    e.preventDefault();
+    limparErroMensalidade();
+
+    if (!selectMensalidade.value) {
+        mostrarErroMensalidade('Selecione uma mensalidade na busca antes de registrar o pagamento.');
+        buscaInput.focus();
+        return;
+    }
+
+    permitirSubmit = true;
+    formPagamento.submit();
+});
+
+// Fechar resultados ao clicar fora
+document.addEventListener('click', function(e) {
+    if (!buscaInput.contains(e.target) && !resultadosDiv.contains(e.target)) {
+        resultadosDiv.classList.add('hidden');
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+
+{% block title %}Relatório de Fechamento de Caixa{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto py-8 px-4">
+    <!-- Botões de Ação -->
+    <div class="mb-6 flex justify-between items-center no-print">
+        <a href="{% url 'dashboard_caixa' %}" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition font-medium">
+            <i class="fas fa-arrow-left mr-2"></i>Voltar
+        </a>
+        <button onclick="window.print()" class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-bold">
+            <i class="fas fa-print mr-2"></i>Imprimir Relatório
+        </button>
+    </div>
+
+    <!-- Relatório (Para Impressão) -->
+    <div class="bg-white rounded-lg shadow-lg p-8 print:shadow-none">
+        <!-- Cabeçalho -->
+        <div class="text-center mb-8 pb-6 border-b-2 border-slate-300">
+            <h1 class="text-3xl font-bold text-slate-900 mb-2">
+                RELATÓRIO DE FECHAMENTO DE CAIXA
+            </h1>
+            <p class="text-slate-600 text-lg">Clínica de Fisioterapia</p>
+            <p class="text-slate-500 text-sm mt-2">
+                Relatório gerado em: {{ now|date:"d/m/Y H:i" }}
+            </p>
+        </div>
+
+        <!-- Informações do Caixa -->
+        <div class="bg-slate-50 rounded-lg p-6 mb-6">
+            <h2 class="text-xl font-bold text-slate-900 mb-4">📋 Informações do Caixa</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <p class="text-sm text-slate-600">Data/Hora Abertura:</p>
+                    <p class="font-bold text-slate-900">{{ caixa.data_abertura|date:"d/m/Y H:i" }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-slate-600">Data/Hora Fechamento:</p>
+                    <p class="font-bold text-slate-900">
+                        {% if caixa.data_fechamento %}
+                            {{ caixa.data_fechamento|date:"d/m/Y H:i" }}
+                        {% else %}
+                            <span class="text-green-600">Em Aberto</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            
+            {% if caixa.observacoes %}
+            <div class="mt-4 pt-4 border-t border-slate-200">
+                <p class="text-sm text-slate-600 mb-1">Observações:</p>
+                <p class="text-slate-900">{{ caixa.observacoes }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Resumo Financeiro -->
+        <div class="grid grid-cols-4 gap-4 mb-6">
+            <div class="bg-blue-50 rounded-lg p-4 border-2 border-blue-200">
+                <p class="text-xs text-blue-700 mb-1">💰 Saldo Inicial</p>
+                <p class="text-2xl font-bold text-blue-600">R$ {{ caixa.saldo_inicial|floatformat:2 }}</p>
+            </div>
+            <div class="bg-green-50 rounded-lg p-4 border-2 border-green-200">
+                <p class="text-xs text-green-700 mb-1">⬆️ Total Entradas</p>
+                <p class="text-2xl font-bold text-green-600">R$ {{ total_entradas|floatformat:2 }}</p>
+            </div>
+            <div class="bg-red-50 rounded-lg p-4 border-2 border-red-200">
+                <p class="text-xs text-red-700 mb-1">⬇️ Total Saídas</p>
+                <p class="text-2xl font-bold text-red-600">R$ {{ total_saidas|floatformat:2 }}</p>
+            </div>
+            <div class="bg-purple-50 rounded-lg p-4 border-2 border-purple-200">
+                <p class="text-xs text-purple-700 mb-1">💵 Saldo Final</p>
+                <p class="text-2xl font-bold text-purple-600">R$ {{ saldo_final|floatformat:2 }}</p>
+            </div>
+        </div>
+
+        <!-- Resumo por Método de Pagamento -->
+        {% if metodos_pagamento %}
+        <div class="mb-6">
+            <h2 class="text-xl font-bold text-slate-900 mb-4">💳 Resumo por Método de Pagamento</h2>
+            <div class="bg-slate-50 rounded-lg p-4">
+                <table class="w-full">
+                    <thead class="border-b-2 border-slate-300">
+                        <tr>
+                            <th class="text-left py-2 text-slate-700">Método</th>
+                            <th class="text-right py-2 text-slate-700">Valor Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for metodo, valor in metodos_pagamento.items %}
+                        <tr class="border-b border-slate-200">
+                            <td class="py-2 text-slate-900">{{ metodo }}</td>
+                            <td class="py-2 text-right font-bold text-green-600">R$ {{ valor|floatformat:2 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Movimentações Detalhadas -->
+        <div class="mb-6">
+            <h2 class="text-xl font-bold text-slate-900 mb-4">📊 Movimentações Detalhadas ({{ movimentacoes|length }})</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-slate-100 border-b-2 border-slate-300">
+                        <tr>
+                            <th class="px-3 py-2 text-left text-slate-700">Data/Hora</th>
+                            <th class="px-3 py-2 text-left text-slate-700">Descrição</th>
+                            <th class="px-3 py-2 text-left text-slate-700">Paciente</th>
+                            <th class="px-3 py-2 text-left text-slate-700">Tipo</th>
+                            <th class="px-3 py-2 text-right text-slate-700">Entrada</th>
+                            <th class="px-3 py-2 text-right text-slate-700">Saída</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for mov in movimentacoes %}
+                        <tr class="border-b border-slate-200">
+                            <td class="px-3 py-2 text-slate-600 whitespace-nowrap">{{ mov.data|date:"d/m H:i" }}</td>
+                            <td class="px-3 py-2 text-slate-900">{{ mov.descricao }}</td>
+                            <td class="px-3 py-2 text-slate-600">{{ mov.paciente }}</td>
+                            <td class="px-3 py-2">
+                                <span class="px-2 py-1 rounded text-xs font-semibold {% if mov.tipo == 'entrada' %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                                    {{ mov.tipo|upper }}
+                                </span>
+                            </td>
+                            <td class="px-3 py-2 text-right font-bold text-green-600">
+                                {% if mov.tipo == 'entrada' %}R$ {{ mov.valor|floatformat:2 }}{% else %}-{% endif %}
+                            </td>
+                            <td class="px-3 py-2 text-right font-bold text-red-600">
+                                {% if mov.tipo == 'saida' %}R$ {{ mov.valor|floatformat:2 }}{% else %}-{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="bg-slate-100 font-bold border-t-2 border-slate-300">
+                        <tr>
+                            <td colspan="4" class="px-3 py-3 text-right">TOTAIS:</td>
+                            <td class="px-3 py-3 text-right text-green-600">R$ {{ total_entradas|floatformat:2 }}</td>
+                            <td class="px-3 py-3 text-right text-red-600">R$ {{ total_saidas|floatformat:2 }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Assinaturas -->
+        <div class="mt-12 pt-8 border-t-2 border-slate-300">
+            <div class="grid grid-cols-2 gap-8">
+                <div class="text-center">
+                    <div class="border-t-2 border-slate-400 pt-2 mt-16">
+                        <p class="font-bold text-slate-900">Responsável pelo Caixa</p>
+                        <p class="text-sm text-slate-600">Assinatura</p>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <div class="border-t-2 border-slate-400 pt-2 mt-16">
+                        <p class="font-bold text-slate-900">Supervisor/Gerente</p>
+                        <p class="text-sm text-slate-600">Assinatura</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    body {
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
+    .print\:shadow-none {
+        box-shadow: none !important;
+    }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,166 @@
+<!-- templates/caixa/relatorio.html -->
+{% extends 'base.html' %}
+
+{% block title %}Relatório de Faturamento - Clínica{% endblock %}
+
+{% block content %}
+<div class="py-8 px-4 sm:px-6 lg:px-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-slate-900 mb-2">
+            <i class="fas fa-chart-bar text-purple-600 mr-3"></i>Relatório de Faturamento
+        </h1>
+        <p class="text-slate-600">Análise detalhada do faturamento da clínica</p>
+    </div>
+
+    <!-- Filtros -->
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-sm font-bold text-slate-900 mb-2">Data Inicial</label>
+                <input 
+                    type="date" 
+                    name="data_inicio" 
+                    value="{{ data_inicio }}"
+                    class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                >
+            </div>
+            <div>
+                <label class="block text-sm font-bold text-slate-900 mb-2">Data Final</label>
+                <input 
+                    type="date" 
+                    name="data_fim" 
+                    value="{{ data_fim }}"
+                    class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                >
+            </div>
+            <div class="flex items-end">
+                <button type="submit" class="w-full px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium">
+                    <i class="fas fa-search mr-2"></i>Buscar
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Total Faturado -->
+    <div class="bg-gradient-to-r from-purple-600 to-purple-700 rounded-lg shadow p-8 mb-8 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-purple-100 text-sm font-medium">Total Faturado</p>
+                <p class="text-4xl font-bold mt-2">R$ {{ total_faturado|floatformat:2 }}</p>
+                {% if data_inicio or data_fim %}
+                    <p class="text-purple-100 text-sm mt-2">
+                        De {{ data_inicio|default:"início" }} até {{ data_fim|default:"hoje" }}
+                    </p>
+                {% endif %}
+            </div>
+            <div class="text-6xl opacity-20">
+                <i class="fas fa-chart-line"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <!-- Por Serviço -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-xl font-bold text-slate-900 mb-6">
+                <i class="fas fa-briefcase text-purple-600 mr-2"></i>Faturamento por Serviço
+            </h3>
+            
+            {% if por_servico %}
+            <div class="space-y-4">
+                {% for item in por_servico %}
+                <div class="border-b border-slate-200 pb-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <p class="font-medium text-slate-900">{{ item.mensalidade__servico__nome }}</p>
+                        <p class="font-bold text-purple-600">R$ {{ item.total|floatformat:2 }}</p>
+                    </div>
+                    <div class="flex items-center justify-between text-sm text-slate-600">
+                        <span>{{ item.count }} pagamento{{ item.count|pluralize }}</span>
+                        <span>{{ item.total|add:0|divide:total_faturado|multiply:100|floatformat:0 }}%</span>
+                    </div>
+                    <div class="w-full bg-slate-200 rounded-full h-2 mt-2">
+                        <div class="bg-purple-600 h-2 rounded-full" style="width: {{ item.total|add:0|divide:total_faturado|multiply:100|floatformat:0 }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-slate-600">Nenhum dado para o período selecionado</p>
+            {% endif %}
+        </div>
+
+        <!-- Por Método -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-xl font-bold text-slate-900 mb-6">
+                <i class="fas fa-credit-card text-purple-600 mr-2"></i>Faturamento por Método
+            </h3>
+            
+            {% if por_metodo %}
+            <div class="space-y-4">
+                {% for item in por_metodo %}
+                <div class="border-b border-slate-200 pb-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <p class="font-medium text-slate-900">{{ item.get_metodo_pagamento_display }}</p>
+                        <p class="font-bold text-green-600">R$ {{ item.total|floatformat:2 }}</p>
+                    </div>
+                    <div class="flex items-center justify-between text-sm text-slate-600">
+                        <span>{{ item.count }} pagamento{{ item.count|pluralize }}</span>
+                        <span>{{ item.total|add:0|divide:total_faturado|multiply:100|floatformat:0 }}%</span>
+                    </div>
+                    <div class="w-full bg-slate-200 rounded-full h-2 mt-2">
+                        <div class="bg-green-600 h-2 rounded-full" style="width: {{ item.total|add:0|divide:total_faturado|multiply:100|floatformat:0 }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-slate-600">Nenhum dado para o período selecionado</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Faturamento Diário -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-xl font-bold text-slate-900 mb-6">
+            <i class="fas fa-calendar-alt text-purple-600 mr-2"></i>Faturamento Diário
+        </h3>
+        
+        {% if faturamento_diario %}
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700">Data</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700">Valor</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700">% do Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dia in faturamento_diario %}
+                    <tr class="border-b border-slate-200 hover:bg-slate-50 transition">
+                        <td class="px-6 py-4 text-sm font-medium text-slate-900">
+                            {{ dia.data_pagamento__date|date:"d/m/Y" }}
+                        </td>
+                        <td class="px-6 py-4 text-sm font-bold text-slate-900">
+                            R$ {{ dia.total|floatformat:2 }}
+                        </td>
+                        <td class="px-6 py-4 text-sm">
+                            <div class="flex items-center gap-2">
+                                <div class="w-20 bg-slate-200 rounded-full h-2">
+                                    <div class="bg-purple-600 h-2 rounded-full" style="width: {{ dia.total|add:0|divide:total_faturado|multiply:100|floatformat:0 }}%"></div>
+                                </div>
+                                <span class="text-slate-600">{{ dia.total|add:0|divide:total_faturado|multiply:100|floatformat:0 }}%</span>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-slate-600">Nenhum dado para o período selecionado</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

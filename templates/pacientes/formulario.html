@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto py-8 px-4">
+    <div class="bg-white rounded-lg shadow-lg p-8">
+        <h1 class="text-3xl font-bold text-slate-900 mb-6">
+            <i class="fas fa-user-plus text-purple-600 mr-3"></i>{{ titulo }}
+        </h1>
+
+        <form method="post" id="formPaciente">
+            {% csrf_token %}
+            
+            <!-- Dados Pessoais -->
+            <div class="mb-8">
+                <h2 class="text-xl font-bold text-slate-900 mb-4 pb-2 border-b-2 border-purple-200">
+                    👤 Dados Pessoais
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-900 mb-2">Nome Completo *</label>
+                        {{ form.nome }}
+                        {% if form.nome.errors %}
+                            <p class="text-red-600 text-sm mt-1">{{ form.nome.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-bold text-slate-900 mb-2">Data de Nascimento *</label>
+                        {{ form.data_nascimento }}
+                        {% if form.data_nascimento.errors %}
+                            <p class="text-red-600 text-sm mt-1">{{ form.data_nascimento.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-bold text-slate-900 mb-2">CPF *</label>
+                        {{ form.cpf }}
+                        {% if form.cpf.errors %}
+                            <p class="text-red-600 text-sm mt-1">{{ form.cpf.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-bold text-slate-900 mb-2">Telefone *</label>
+                        {{ form.telefone }}
+                        {% if form.telefone.errors %}
+                            <p class="text-red-600 text-sm mt-1">{{ form.telefone.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-bold text-slate-900 mb-2">E-mail</label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <p class="text-red-600 text-sm mt-1">{{ form.email.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-bold text-slate-900 mb-2">📅 Início das Atividades</label>
+                        {{ form.inicio_atividades }}
+                        <p class="text-xs text-slate-500 mt-1">Data em que o paciente começou a utilizar a clínica</p>
+                        {% if form.inicio_atividades.errors %}
+                            <p class="text-red-600 text-sm mt-1">{{ form.inicio_atividades.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-bold text-slate-900 mb-2">Endereço</label>
+                        {{ form.endereco }}
+                        {% if form.endereco.errors %}
+                            <p class="text-red-600 text-sm mt-1">{{ form.endereco.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                   <div>
+                        <label class="block text-sm font-bold text-slate-900 mb-2">Cidade</label>
+                        {{ form.cidade }}
+                        {% if form.cidade.errors %}
+                            <p class="text-red-600 text-sm mt-1">{{ form.cidade.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dados do Serviço -->
+            <div class="mb-8">
+                <h2 class="text-xl font-bold text-slate-900 mb-4 pb-2 border-b-2 border-green-200">
+                    💰 Dados do Serviço e Mensalidade
+                </h2>
+                
+                <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4 rounded-r-lg">
+                    <p class="text-sm text-blue-900">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        <strong>Atenção:</strong> Ao preencher os dados abaixo, as mensalidades serão criadas automaticamente.
+                    </p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-bold text-slate-900 mb-2">Serviço</label>
+                        {{ form.servico }}
+                        <p class="text-xs text-slate-500 mt-1">Selecione o tipo de serviço contratado</p>
+                        {% if form.servico.errors %}
+                            <p class="text-red-600 text-sm mt-1">{{ form.servico.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-bold text-slate-900 mb-2">Valor da Mensalidade (R$)</label>
+                        {{ form.valor_mensalidade }}
+                        {% if form.valor_mensalidade.errors %}
+                            <p class="text-red-600 text-sm mt-1">{{ form.valor_mensalidade.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-bold text-slate-900 mb-2">Dia de Vencimento</label>
+                        {{ form.dia_vencimento }}
+                        <p class="text-xs text-slate-500 mt-1">Dia do mês para vencimento (1 a 31)</p>
+                        {% if form.dia_vencimento.errors %}
+                            <p class="text-red-600 text-sm mt-1">{{ form.dia_vencimento.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Campo Quantidade de Meses (só para Fisioterapia) -->
+                    <div id="divQuantidadeMeses" style="display: none;" class="md:col-span-2">
+                        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg">
+                            <label class="block text-sm font-bold text-yellow-900 mb-2">
+                                <i class="fas fa-calendar-alt mr-2"></i>Quantidade de Meses (Pacote Fisioterapia)
+                            </label>
+                            {{ form.quantidade_meses }}
+                            <p class="text-xs text-yellow-800 mt-1">
+                                📦 Como fisioterapia é geralmente um pacote, informe quantos meses de tratamento serão criados
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status -->
+            <div class="mb-8">
+                <label class="block text-sm font-bold text-slate-900 mb-2">Status do Paciente</label>
+                {{ form.status }}
+                {% if form.status.errors %}
+                    <p class="text-red-600 text-sm mt-1">{{ form.status.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Botões -->
+            <div class="flex gap-4">
+                <button type="submit" class="flex-1 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-bold">
+                    <i class="fas fa-save mr-2"></i>Salvar Paciente
+                </button>
+                <a href="{% url 'lista_pacientes' %}" class="flex-1 px-6 py-3 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition font-bold text-center">
+                    <i class="fas fa-times mr-2"></i>Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Mostrar/ocultar campo de quantidade de meses baseado no serviço selecionado
+document.addEventListener('DOMContentLoaded', function() {
+    const servicoSelect = document.getElementById('id_servico');
+    const divQuantidade = document.getElementById('divQuantidadeMeses');
+    const inputQuantidade = document.getElementById('id_quantidade_meses');
+    
+    function verificarServico() {
+        const servicoTexto = servicoSelect.options[servicoSelect.selectedIndex].text.toLowerCase();
+        
+        if (servicoTexto.includes('fisioterapia')) {
+            divQuantidade.style.display = 'block';
+            inputQuantidade.style.display = 'block';
+            inputQuantidade.required = true;
+        } else {
+            divQuantidade.style.display = 'none';
+            inputQuantidade.style.display = 'none';
+            inputQuantidade.required = false;
+            inputQuantidade.value = '12'; // Default para outros serviços
+        }
+    }
+    
+    servicoSelect.addEventListener('change', verificarServico);
+    verificarServico(); // Executar ao carregar a página
+});
+</script>
+{% endblock %}

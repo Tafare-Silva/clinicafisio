@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+
+{% block title %}Abrir Caixa{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto py-8 px-4">
+    <div class="bg-white rounded-lg shadow-lg p-8">
+        <h1 class="text-2xl font-bold text-slate-900 mb-6">
+            <i class="fas fa-lock-open text-green-600 mr-2"></i>Abrir Novo Caixa
+        </h1>
+        
+        {% if ultimo_caixa %}
+        <div class="bg-blue-50 border-l-4 border-blue-500 p-5 mb-6 rounded-r-lg">
+            <div class="flex items-start">
+                <i class="fas fa-info-circle text-blue-600 text-xl mr-3 mt-1"></i>
+                <div class="flex-1">
+                    <p class="text-sm text-blue-900 font-bold mb-3">
+                        📊 Resumo do Último Caixa Fechado
+                    </p>
+                    <div class="grid grid-cols-2 gap-4 text-sm mb-3">
+                        <div>
+                            <span class="text-blue-700">Data Fechamento:</span>
+                            <p class="font-bold text-blue-900">{{ ultimo_caixa.data_fechamento|date:"d/m/Y H:i" }}</p>
+                        </div>
+                        <div>
+                            <span class="text-blue-700">Saldo Inicial:</span>
+                            <p class="font-bold text-blue-900">R$ {{ ultimo_caixa.saldo_inicial|floatformat:2 }}</p>
+                        </div>
+                        <div>
+                            <span class="text-blue-700">Total Entradas:</span>
+                            <p class="font-bold text-green-700">+ R$ {{ ultimo_caixa.total_entradas|floatformat:2 }}</p>
+                        </div>
+                        <div>
+                            <span class="text-blue-700">Total Saídas:</span>
+                            <p class="font-bold text-red-700">- R$ {{ ultimo_caixa.total_saidas|floatformat:2 }}</p>
+                        </div>
+                    </div>
+                    <div class="bg-blue-100 rounded-lg p-3 border-2 border-blue-300">
+                        <span class="text-blue-700 text-sm">💰 Saldo Final (Anterior):</span>
+                        <p class="font-bold text-blue-900 text-2xl">R$ {{ ultimo_caixa.saldo_final|floatformat:2 }}</p>
+                    </div>
+                    <p class="text-xs text-blue-700 mt-3">
+                        💡 <strong>Este será o saldo inicial sugerido</strong> para o novo caixa
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <form method="post" id="formAbrirCaixa">
+            {% csrf_token %}
+            <!-- DEBUG - REMOVER DEPOIS -->
+            <div class="bg-yellow-100 p-4 mb-4 rounded">
+                <p><strong>DEBUG:</strong></p>
+                <p>saldo_sugerido: {{ saldo_sugerido }}</p>
+                <p>ultimo_caixa: {{ ultimo_caixa }}</p>
+                {% if ultimo_caixa %}
+                <p>ultimo_caixa.saldo_final: {{ ultimo_caixa.saldo_final }}</p>
+                {% endif %}
+            </div>
+            <div class="mb-6">
+                <label class="block text-sm font-bold text-slate-900 mb-2">
+                    💵 Saldo Inicial do Novo Caixa (R$)
+                </label>
+                <input 
+                    type="text" 
+                    name="saldo_inicial" 
+                    value="{{ saldo_sugerido }}"
+                    id="saldoInicial"
+                    {% if ultimo_caixa %}readonly{% endif %}
+                    class="w-full px-4 py-3 border-2 {% if ultimo_caixa %}bg-slate-100 border-slate-400 cursor-not-allowed{% else %}border-slate-300{% endif %} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-2xl font-bold text-center"
+                    required
+                >
+                
+                {% if ultimo_caixa %}
+                <div class="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p class="text-sm text-blue-900">
+                        <i class="fas fa-lock mr-2"></i>
+                        <strong>Valor bloqueado para edição:</strong> Este é o saldo final do caixa anterior ({{ ultimo_caixa.data_fechamento|date:"d/m/Y H:i" }})
+                    </p>
+                </div>
+                {% else %}
+                <p class="text-sm text-slate-500 mt-2">
+                    💰 Digite o valor em dinheiro disponível no caixa para iniciar o dia
+                </p>
+                {% endif %}
+            </div>
+
+            {% if ultimo_caixa %}
+            <script>
+                // Garantir que o valor seja preenchido quando a página carregar
+                document.addEventListener('DOMContentLoaded', function() {
+                    const input = document.getElementById('saldoInicial');
+                    input.value = '{{ saldo_sugerido }}';
+                });
+            </script>
+            {% endif %}
+                        
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded-r-lg">
+                <p class="text-sm text-yellow-900">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    <strong>Atenção:</strong> Confira se o valor digitado corresponde ao dinheiro físico disponível no caixa antes de confirmar.
+                </p>
+            </div>
+            
+            <div class="flex gap-4">
+                <button type="submit" class="flex-1 px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-bold text-lg shadow-lg">
+                    <i class="fas fa-check-circle mr-2"></i>Abrir Caixa Agora
+                </button>
+                <a href="{% url 'dashboard_caixa' %}" class="flex-1 px-6 py-4 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition font-bold text-lg text-center shadow">
+                    <i class="fas fa-times mr-2"></i>Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

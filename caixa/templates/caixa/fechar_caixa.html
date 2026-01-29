@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block title %}Fechar Caixa{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto py-8 px-4">
+    <div class="bg-white rounded-lg shadow-lg p-8">
+        <h1 class="text-2xl font-bold text-slate-900 mb-6">
+            <i class="fas fa-lock text-red-600 mr-2"></i>Fechar Caixa
+        </h1>
+        <a href="{% url 'relatorio_fechamento_caixa' caixa.id %}" target="_blank" class="block w-full mb-4 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-bold text-center">
+            <i class="fas fa-file-alt mr-2"></i>Pré-visualizar Relatório de Fechamento
+        </a>
+        <div class="bg-slate-50 rounded-lg p-6 mb-6">
+            <div class="grid grid-cols-2 gap-6">
+                <div>
+                    <p class="text-sm text-slate-600 mb-1">📅 Abertura</p>
+                    <p class="text-lg font-bold">{{ caixa.data_abertura|date:"d/m/Y H:i" }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-slate-600 mb-1">💰 Saldo Inicial</p>
+                    <p class="text-lg font-bold text-blue-600">R$ {{ caixa.saldo_inicial|floatformat:2 }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-slate-600 mb-1">⬆️ Total Entradas</p>
+                    <p class="text-lg font-bold text-green-600">+ R$ {{ total_entradas|floatformat:2 }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-slate-600 mb-1">⬇️ Total Saídas</p>
+                    <p class="text-lg font-bold text-red-600">- R$ {{ total_saidas|floatformat:2 }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-slate-600 mb-1">📊 Movimentações</p>
+                    <p class="text-lg font-bold">{{ total_movimentacoes }}</p>
+                </div>
+            </div>
+            
+            <div class="mt-6 pt-6 border-t-2 border-slate-300">
+                <p class="text-sm text-slate-600 mb-2">💵 Saldo Final Esperado</p>
+                <p class="text-4xl font-bold text-purple-600">R$ {{ saldo_final|floatformat:2 }}</p>
+                <p class="text-xs text-slate-500 mt-2">Este deve ser o valor em dinheiro no caixa agora</p>
+            </div>
+        </div>
+        
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+            <p class="text-sm text-yellow-900">
+                <i class="fas fa-exclamation-triangle mr-2"></i>
+                <strong>Atenção:</strong> Após fechar o caixa, você não poderá mais adicionar movimentações a ele. 
+                Confira se todas as entradas e saídas foram registradas.
+            </p>
+        </div>
+        
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="mb-6">
+                <label class="block text-sm font-bold text-slate-900 mb-2">Observações sobre o fechamento (opcional)</label>
+                <textarea 
+                    name="observacoes" 
+                    rows="3"
+                    class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                    placeholder="Ex: Dinheiro recolhido e guardado no cofre, conferência OK..."
+                ></textarea>
+            </div>
+            
+            <div class="flex gap-4">
+                <button type="submit" class="flex-1 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-bold">
+                    <i class="fas fa-lock mr-2"></i>Confirmar Fechamento
+                </button>
+                <a href="{% url 'dashboard_caixa' %}" class="flex-1 px-6 py-3 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition font-bold text-center">
+                    Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
