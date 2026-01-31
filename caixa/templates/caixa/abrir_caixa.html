@@ -49,15 +49,7 @@
         
         <form method="post" id="formAbrirCaixa">
             {% csrf_token %}
-            <!-- DEBUG - REMOVER DEPOIS -->
-            <div class="bg-yellow-100 p-4 mb-4 rounded">
-                <p><strong>DEBUG:</strong></p>
-                <p>saldo_sugerido: {{ saldo_sugerido }}</p>
-                <p>ultimo_caixa: {{ ultimo_caixa }}</p>
-                {% if ultimo_caixa %}
-                <p>ultimo_caixa.saldo_final: {{ ultimo_caixa.saldo_final }}</p>
-                {% endif %}
-            </div>
+            
             <div class="mb-6">
                 <label class="block text-sm font-bold text-slate-900 mb-2">
                     💵 Saldo Inicial do Novo Caixa (R$)
