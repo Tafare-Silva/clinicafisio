@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <title>Paciente cadastrado</title>
+</head>
+<body>
+  <script>
+    (function () {
+      const payload = {
+        type: 'paciente_criado',
+        paciente: {
+          id: {{ paciente.id }},
+          nome: "{{ paciente.nome|escapejs }}",
+          telefone: "{{ paciente.telefone|default:''|escapejs }}",
+          cpf: "{{ paciente.cpf|default:''|escapejs }}"
+        }
+      };
+
+      // manda pro "pai" (tela do caixa)
+      window.parent.postMessage(payload, window.location.origin);
+
+      // feedback simples dentro do iframe (opcional)
+      document.body.innerHTML = "<div style='font-family: Arial; padding:16px;'>Paciente cadastrado. Você já pode fechar o modal.</div>";
+    })();
+  </script>
+</body>
+</html>

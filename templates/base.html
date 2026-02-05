@@ -1,4 +1,5 @@
 <!-- templates/base.html -->
+ {% load static %}
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -42,15 +43,14 @@
             <div class="flex justify-between h-16">
                 <div class="flex items-center gap-2">
                     <i class="fas fa-heartbeat text-white text-2xl"></i>
-                    <span class="text-white font-bold text-xl hidden sm:inline">Clínica</span>
+                    <a href="{% url 'home' %}"><span class="text-white font-bold text-xl hidden sm:inline">Fisioclin</span></a>
                 </div>
                 
-                <div class="flex items-center gap-4">
-                    <div class="hidden md:flex gap-6 items-center">
-                        <a href="{% url 'lista_pacientes' %}" class="text-white hover:text-purple-200 transition">Pacientes</a>
-                        <a href="{% url 'dashboard_caixa' %}" class="text-white hover:text-purple-200 transition">Caixa</a>
-                        <a href="{% url 'lista_mensalidades' %}" class="text-white hover:text-purple-200 transition">Mensalidades</a>
-                    </div>
+                <div class="hidden md:flex gap-6 items-center">
+                    <a href="{% url 'home' %}" class="text-white hover:text-purple-200 transition">Início</a>
+                    <a href="{% url 'lista_pacientes' %}" class="text-white hover:text-purple-200 transition">Pacientes</a>
+                    <a href="{% url 'dashboard_caixa' %}" class="text-white hover:text-purple-200 transition">Caixa</a>
+                    <a href="{% url 'lista_mensalidades' %}" class="text-white hover:text-purple-200 transition">Mensalidades</a>
                 </div>
             </div>
         </div>
@@ -81,13 +81,29 @@
     </div>
 
     <!-- Footer -->
-    <footer class="bg-white border-t border-slate-200 mt-12">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div class="text-center text-slate-600 text-sm">
-                <p>&copy; 2024 Sistema de Gestão de Clínica de Fisioterapia. Todos os direitos reservados.</p>
-            </div>
+    <footer class="mt-10 border-t border-slate-200 bg-white">
+  <div class="max-w-6xl mx-auto px-4 py-5">
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+
+      <div class="flex items-center gap-3 text-center sm:text-left">
+        <img src="{% static 'images/logo.png' %}" alt="BLANJOS SISTEMAS" class="h-16 sm:h-18 w-auto opacity-95" />
+        <div class="text-sm text-slate-600 leading-tight">
+          <div>Desenvolvido por: <span class="font-bold text-slate-900">BLANJOS SISTEMAS</span></div>
+          <div>Contato: <span class="font-semibold text-slate-800">(43) 99629-5313</span></div>
         </div>
-    </footer>
+      </div>
+
+      <a href="https://wa.me/5543996295313?text=Ol%C3%A1%21%20Preciso%20de%20suporte%20no%20sistema."
+         target="_blank" rel="noopener"
+         class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 transition text-sm"
+         aria-label="Abrir suporte no WhatsApp" title="Suporte via WhatsApp">
+        <i class="fab fa-whatsapp text-lg"></i>
+        <span class="font-semibold">Suporte</span>
+      </a>
+
+    </div>
+  </div>
+</footer>
 
     {% block extra_js %}{% endblock %}
 </body>

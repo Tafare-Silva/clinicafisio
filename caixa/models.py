@@ -87,6 +87,15 @@ class MovimentacaoCaixa(models.Model):
         ('funcionario', 'Funcionário'),
         ('outro', 'Outro'),
     ]
+
+    METODO_PAGAMENTO_CHOICES = [
+        ('dinheiro', 'Dinheiro'),
+        ('pix', 'Pix'),
+        ('credito', 'Cartão de Crédito'),
+        ('debito', 'Cartão de Débito'),
+        ('cheque', 'Cheque'),
+        ('outro', 'Outro'),
+    ]
     
     tipo = models.CharField(max_length=10, choices=TIPO_CHOICES)
     categoria_entrada = models.CharField(max_length=20, choices=CATEGORIA_ENTRADA_CHOICES, blank=True, null=True)
@@ -101,6 +110,21 @@ class MovimentacaoCaixa(models.Model):
     observacoes = models.TextField(blank=True)
     caixa = models.ForeignKey(AberturaCaixa, on_delete=models.SET_NULL, null=True, blank=True, related_name='movimentacoes')
     
+    servico = models.ForeignKey(
+        'servicos.Servico',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='movimentacoes_caixa'
+    )
+
+    metodo_pagamento = models.CharField(
+        max_length=20,
+        choices=METODO_PAGAMENTO_CHOICES,
+        null=True,
+        blank=True
+    )
+
     def __str__(self):
         return f"{self.get_tipo_display()} - {self.descricao} - R$ {self.valor:.2f}"
     

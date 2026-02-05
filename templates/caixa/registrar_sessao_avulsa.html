@@ -1,91 +1,407 @@
+{# templates/caixa/registrar_sessao_avulsa.html #}
 {% extends 'base.html' %}
 
 {% block title %}Registrar Sessão Avulsa - Clínica{% endblock %}
 
 {% block content %}
 <div class="py-8 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-2xl mx-auto">
-        <div class="mb-8">
-            <a href="{% url 'dashboard_caixa' %}" class="text-purple-600 hover:text-purple-800 flex items-center gap-2 mb-4">
-                <i class="fas fa-arrow-left"></i>Voltar ao Caixa
-            </a>
-            <h1 class="text-3xl font-bold text-slate-900">
-                <i class="fas fa-plus-circle text-green-600 mr-3"></i>Registrar Sessão Avulsa
-            </h1>
-        </div>
+  <div class="max-w-3xl mx-auto">
+    <div class="mb-8">
+      <a href="{% url 'dashboard_caixa' %}" class="text-purple-600 hover:text-purple-800 flex items-center gap-2 mb-4">
+        <i class="fas fa-arrow-left"></i>Voltar ao Caixa
+      </a>
 
-        <div class="bg-white rounded-lg shadow-lg p-8">
-            <form method="post" class="space-y-6">
-                {% csrf_token %}
+      <div class="flex items-start justify-between gap-4">
+        <h1 class="text-3xl font-bold text-slate-900">
+          <i class="fas fa-plus-circle text-green-600 mr-3"></i>Registrar Sessão Avulsa
+        </h1>
 
-                <div>
-                    <label for="{{ form.paciente.id_for_label }}" class="block text-sm font-bold text-slate-900 mb-2">
-                        Paciente
-                    </label>
-                    {% if form.paciente.errors %}
-                        <div class="text-red-600 text-sm mb-2">{{ form.paciente.errors }}</div>
-                    {% endif %}
-                    {{ form.paciente }}
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label for="{{ form.servico.id_for_label }}" class="block text-sm font-bold text-slate-900 mb-2">
-                            Serviço
-                        </label>
-                        {% if form.servico.errors %}
-                            <div class="text-red-600 text-sm mb-2">{{ form.servico.errors }}</div>
-                        {% endif %}
-                        {{ form.servico }}
-                    </div>
-                    <div>
-                        <label for="{{ form.valor.id_for_label }}" class="block text-sm font-bold text-slate-900 mb-2">
-                            Valor (R$)
-                        </label>
-                        {% if form.valor.errors %}
-                            <div class="text-red-600 text-sm mb-2">{{ form.valor.errors }}</div>
-                        {% endif %}
-                        {{ form.valor }}
-                    </div>
-                </div>
-
-                <div>
-                    <label for="{{ form.metodo_pagamento.id_for_label }}" class="block text-sm font-bold text-slate-900 mb-2">
-                        Método de Pagamento
-                    </label>
-                    {% if form.metodo_pagamento.errors %}
-                        <div class="text-red-600 text-sm mb-2">{{ form.metodo_pagamento.errors }}</div>
-                    {% endif %}
-                    {{ form.metodo_pagamento }}
-                </div>
-
-                <div>
-                    <label for="{{ form.descricao.id_for_label }}" class="block text-sm font-bold text-slate-900 mb-2">
-                        Descrição
-                    </label>
-                    {% if form.descricao.errors %}
-                        <div class="text-red-600 text-sm mb-2">{{ form.descricao.errors }}</div>
-                    {% endif %}
-                    {{ form.descricao }}
-                </div>
-
-                <div>
-                    <label for="{{ form.observacoes.id_for_label }}" class="block text-sm font-bold text-slate-900 mb-2">
-                        Observações
-                    </label>
-                    {{ form.observacoes }}
-                </div>
-
-                <div class="flex gap-4 pt-4 border-t border-slate-200">
-                    <button type="submit" class="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-bold flex items-center justify-center gap-2">
-                        <i class="fas fa-check-circle"></i>Registrar Sessão
-                    </button>
-                    <a href="{% url 'dashboard_caixa' %}" class="flex-1 px-6 py-3 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300 transition font-bold flex items-center justify-center gap-2">
-                        <i class="fas fa-times-circle"></i>Cancelar
-                    </a>
-                </div>
-            </form>
-        </div>
+        <button type="button"
+                id="btnAbrirModalPaciente"
+                class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-bold flex items-center gap-2">
+          <i class="fas fa-user-plus"></i>Cadastrar paciente
+        </button>
+      </div>
     </div>
+
+    <div class="bg-white rounded-lg shadow-lg p-8">
+      <form method="post" class="space-y-6" id="formSessaoAvulsa">
+        {% csrf_token %}
+
+        {# Campo real do form (HIDDEN): receberá o ID do paciente selecionado #}
+        {{ form.paciente }}
+
+        <div>
+          <label class="block text-sm font-bold text-slate-900 mb-2">Paciente</label>
+
+          {% if form.paciente.errors %}
+            <div class="text-red-600 text-sm mb-2">{{ form.paciente.errors }}</div>
+          {% endif %}
+
+          <div class="relative">
+            <input type="text"
+                   id="pacienteBusca"
+                   class="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-lg"
+                   placeholder="Digite o nome, telefone ou CPF para buscar..."
+                   autocomplete="off" />
+
+            <div id="pacienteResultados"
+                 class="hidden absolute z-30 mt-2 w-full bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden">
+              <div class="p-3 text-sm text-slate-600" id="pacienteResultadosHint">
+                Digite para buscar pacientes...
+              </div>
+              <div id="pacienteResultadosLista" class="max-h-72 overflow-auto"></div>
+            </div>
+          </div>
+
+          <div id="pacienteSelecionado"
+               class="hidden mt-3 p-3 rounded-lg bg-green-50 border border-green-200 text-green-800 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+              <i class="fas fa-check-circle"></i>
+              <span id="pacienteSelecionadoNome" class="font-bold"></span>
+            </div>
+            <button type="button"
+                    id="btnTrocarPaciente"
+                    class="text-sm font-bold text-green-800 hover:text-green-900 underline">
+              trocar
+            </button>
+          </div>
+
+          <p class="mt-2 text-sm text-slate-500">
+            Se o paciente não existir, clique em <b>Cadastrar paciente</b> (abre um modal, sem sair do caixa).
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label for="{{ form.servico.id_for_label }}" class="block text-sm font-bold text-slate-900 mb-2">
+              Serviço
+            </label>
+            {% if form.servico.errors %}
+              <div class="text-red-600 text-sm mb-2">{{ form.servico.errors }}</div>
+            {% endif %}
+            {{ form.servico }}
+            <p class="mt-2 text-sm text-slate-500">
+              Ao selecionar o serviço, o valor padrão é sugerido automaticamente.
+            </p>
+          </div>
+
+          <div>
+            <label for="{{ form.valor.id_for_label }}" class="block text-sm font-bold text-slate-900 mb-2">
+              Valor (R$)
+            </label>
+            {% if form.valor.errors %}
+              <div class="text-red-600 text-sm mb-2">{{ form.valor.errors }}</div>
+            {% endif %}
+            {{ form.valor }}
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-bold text-slate-900 mb-2">
+            Método de Pagamento
+          </label>
+
+          {% if form.metodo_pagamento.errors %}
+            <div class="text-red-600 text-sm mb-2">{{ form.metodo_pagamento.errors }}</div>
+          {% endif %}
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {% for value, label in form.metodo_pagamento.field.choices %}
+              <label class="cursor-pointer">
+                <input type="radio"
+                       name="{{ form.metodo_pagamento.html_name }}"
+                       value="{{ value }}"
+                       class="peer sr-only"
+                       {% if form.metodo_pagamento.value == value %}checked{% endif %} />
+
+                <div class="p-4 rounded-lg border-2 border-slate-200 bg-white
+                            peer-checked:border-purple-600 peer-checked:bg-purple-50
+                            hover:border-slate-300 transition">
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="font-bold text-slate-900">{{ label }}</span>
+                    <i class="fas fa-credit-card text-slate-400 peer-checked:text-purple-700"></i>
+                  </div>
+                  <div class="text-sm text-slate-600 mt-1">Selecionar</div>
+                </div>
+              </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div>
+          <label for="{{ form.descricao.id_for_label }}" class="block text-sm font-bold text-slate-900 mb-2">
+            Descrição
+          </label>
+          {% if form.descricao.errors %}
+            <div class="text-red-600 text-sm mb-2">{{ form.descricao.errors }}</div>
+          {% endif %}
+          {{ form.descricao }}
+        </div>
+
+        <div>
+          <label for="{{ form.observacoes.id_for_label }}" class="block text-sm font-bold text-slate-900 mb-2">
+            Observações
+          </label>
+          {{ form.observacoes }}
+        </div>
+
+        <div class="flex gap-4 pt-4 border-t border-slate-200">
+          <button type="submit"
+                  class="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-bold flex items-center justify-center gap-2">
+            <i class="fas fa-check-circle"></i>Registrar Sessão
+          </button>
+
+          <a href="{% url 'dashboard_caixa' %}"
+             class="flex-1 px-6 py-3 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300 transition font-bold flex items-center justify-center gap-2">
+            <i class="fas fa-times-circle"></i>Cancelar
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
+
+{# Modal: cadastrar paciente sem sair da tela (iframe) #}
+<div id="modalPaciente" class="hidden fixed inset-0 z-50">
+  <div class="absolute inset-0 bg-black/50" id="modalPacienteBackdrop"></div>
+
+  <div class="relative mx-auto my-8 w-[95vw] max-w-4xl bg-white rounded-xl shadow-2xl overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200">
+      <h2 class="text-lg font-bold text-slate-900">
+        <i class="fas fa-user-plus text-purple-600 mr-2"></i>Novo paciente
+      </h2>
+      <button type="button" id="btnFecharModalPaciente" class="px-3 py-2 rounded-lg hover:bg-slate-100">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="p-0">
+      <iframe id="iframeCadastroPaciente"
+              src="{% url 'cadastrar_paciente' %}?modal=1"
+              class="w-full h-[75vh] border-0"></iframe>
+    </div>
+
+    <div class="px-5 py-4 border-t border-slate-200 text-sm text-slate-600">
+      Ao salvar o paciente, ele será selecionado automaticamente nesta tela.
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  // ====== CONFIG ======
+  const PACIENTE_SEARCH_URL = "{% url 'api_buscar_pacientes' %}";
+
+  // ====== ELEMENTOS ======
+  const inputBusca = document.getElementById('pacienteBusca');
+  const boxResultados = document.getElementById('pacienteResultados');
+  const hintResultados = document.getElementById('pacienteResultadosHint');
+  const listaResultados = document.getElementById('pacienteResultadosLista');
+
+  const hiddenPaciente = document.getElementById('id_paciente');
+  const blocoSelecionado = document.getElementById('pacienteSelecionado');
+  const nomeSelecionado = document.getElementById('pacienteSelecionadoNome');
+  const btnTrocarPaciente = document.getElementById('btnTrocarPaciente');
+
+  const servicoSelect = document.getElementById('id_servico');
+  const valorInput = document.getElementById('id_valor');
+
+  // Modal
+  const modal = document.getElementById('modalPaciente');
+  const btnAbrirModal = document.getElementById('btnAbrirModalPaciente');
+  const btnFecharModal = document.getElementById('btnFecharModalPaciente');
+  const backdrop = document.getElementById('modalPacienteBackdrop');
+
+  // ====== SERVICOS (para sugestão de valor e seleção automática) ======
+  const servicos = {
+    {% if servicos %}
+      {% for s in servicos %}
+        "{{ s.id }}": { nome: "{{ s.nome|escapejs }}", valor: "{{ s.valor_padrao }}" }{% if not forloop.last %},{% endif %}
+      {% endfor %}
+    {% endif %}
+  };
+
+  function autoPreencherValorSeVazio(servicoId) {
+    if (!valorInput) return;
+    if (!servicoId || !servicos[servicoId]) return;
+
+    const atual = (valorInput.value || '').trim();
+    if (atual === '' || atual === '0' || atual === '0.0' || atual === '0.00') {
+      valorInput.value = servicos[servicoId].valor;
+    }
+  }
+
+  function selecionarServicoSeVazio(servicoId) {
+    if (!servicoSelect) return;
+    if (!servicoId) return;
+
+    // Se o usuário já escolheu um serviço, não sobrescreve
+    if (servicoSelect.value && String(servicoSelect.value).trim() !== '') return;
+
+    servicoSelect.value = String(servicoId);
+    autoPreencherValorSeVazio(String(servicoId));
+  }
+
+  if (servicoSelect) {
+    servicoSelect.addEventListener('change', () => autoPreencherValorSeVazio(servicoSelect.value));
+  }
+
+  // ====== AUTOCOMPLETE PACIENTES ======
+  let debounceTimer = null;
+  let lastQuery = '';
+
+  function abrirResultados() { boxResultados.classList.remove('hidden'); }
+  function fecharResultados() { boxResultados.classList.add('hidden'); }
+  function limparResultados() { listaResultados.innerHTML = ''; }
+  function setHint(texto) { hintResultados.textContent = texto; }
+
+  function escapeHtml(s) {
+    return (s || '').replaceAll('&lt;', '&lt;').replaceAll('>', '&gt;');
+  }
+
+  function selecionarPaciente(p) {
+    if (hiddenPaciente) hiddenPaciente.value = p.id;
+
+    nomeSelecionado.textContent = p.nome || '(sem nome)';
+    blocoSelecionado.classList.remove('hidden');
+
+    inputBusca.value = p.nome || '';
+    inputBusca.disabled = true;
+
+    // seleção automática do serviço do paciente (se vier no payload)
+    if (p.servico_id) {
+      selecionarServicoSeVazio(p.servico_id);
+    }
+
+    fecharResultados();
+  }
+
+  function habilitarTrocaPaciente() {
+    if (hiddenPaciente) hiddenPaciente.value = '';
+    inputBusca.value = '';
+    inputBusca.disabled = false;
+    blocoSelecionado.classList.add('hidden');
+    inputBusca.focus();
+  }
+
+  if (btnTrocarPaciente) btnTrocarPaciente.addEventListener('click', habilitarTrocaPaciente);
+
+  async function buscarPacientes(q) {
+    const url = `${PACIENTE_SEARCH_URL}?q=${encodeURIComponent(q)}`;
+    const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!resp.ok) throw new Error('Falha ao buscar pacientes');
+    return await resp.json();
+  }
+
+  function renderResultados(items) {
+    limparResultados();
+
+    if (!items || items.length === 0) {
+      setHint('Nenhum paciente encontrado.');
+      return;
+    }
+
+    setHint(`Encontrados: ${items.length}. Clique para selecionar.`);
+    items.forEach((p) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'w-full text-left px-4 py-3 hover:bg-slate-50 border-t border-slate-100';
+
+      const nome = escapeHtml(p.nome);
+      const tel = p.telefone ? escapeHtml(p.telefone) : '';
+      const cpf = p.cpf ? escapeHtml(p.cpf) : '';
+
+      btn.innerHTML = `
+        <div class="font-bold text-slate-900">${nome}</div>
+        <div class="text-sm text-slate-600">
+          ${tel ? `Tel: ${tel}` : ''}
+          ${cpf ? `${tel ? ' • ' : ''}CPF: ${cpf}` : ''}
+        </div>
+      `;
+
+      btn.addEventListener('click', () => selecionarPaciente(p));
+      listaResultados.appendChild(btn);
+    });
+  }
+
+  function onInputBusca() {
+    const q = (inputBusca.value || '').trim();
+    lastQuery = q;
+
+    abrirResultados();
+
+    if (q.length < 2) {
+      limparResultados();
+      setHint('Digite pelo menos 2 letras...');
+      return;
+    }
+
+    setHint('Buscando...');
+    limparResultados();
+
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(async () => {
+      try {
+        const data = await buscarPacientes(q);
+        if (lastQuery !== q) return;
+        renderResultados(data);
+      } catch (e) {
+        limparResultados();
+        setHint('Erro ao buscar. Tente novamente.');
+      }
+    }, 250);
+  }
+
+  if (inputBusca) {
+    inputBusca.addEventListener('input', onInputBusca);
+    inputBusca.addEventListener('focus', () => abrirResultados());
+  }
+
+  document.addEventListener('click', (e) => {
+    const clicouDentro = boxResultados.contains(e.target) || inputBusca.contains(e.target);
+    if (!clicouDentro) fecharResultados();
+  });
+
+  // ====== MODAL ======
+  function abrirModal() { modal.classList.remove('hidden'); }
+  function fecharModal() { modal.classList.add('hidden'); }
+
+  if (btnAbrirModal) btnAbrirModal.addEventListener('click', abrirModal);
+  if (btnFecharModal) btnFecharModal.addEventListener('click', fecharModal);
+  if (backdrop) backdrop.addEventListener('click', fecharModal);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modal.classList.contains('hidden')) fecharModal();
+  });
+
+  // ====== RECEBER PACIENTE CRIADO NO IFRAME ======
+  window.addEventListener('message', (event) => {
+    if (event.origin !== window.location.origin) return;
+
+    const data = event.data || {};
+    if (data.type !== 'paciente_criado') return;
+
+    const p = data.paciente;
+    if (!p || !p.id) return;
+
+    selecionarPaciente(p);
+    fecharModal();
+  });
+
+  // ====== VALIDAÇÃO: impedir submit sem paciente selecionado ======
+  const form = document.getElementById('formSessaoAvulsa');
+  if (form) {
+    form.addEventListener('submit', (e) => {
+      if (!hiddenPaciente || !hiddenPaciente.value) {
+        e.preventDefault();
+        abrirResultados();
+        inputBusca.disabled = false;
+        inputBusca.focus();
+        setHint('Selecione um paciente antes de registrar.');
+      }
+    });
+  }
+})();
+</script>
 {% endblock %}

@@ -11,8 +11,10 @@
 
         <form method="post" id="formPaciente">
             {% csrf_token %}
-            
-            <!-- Dados Pessoais -->
+            {% if modal %}
+                <input type="hidden" name="modal" value="1">
+                {% endif %}
+                            <!-- Dados Pessoais -->
             <div class="mb-8">
                 <h2 class="text-xl font-bold text-slate-900 mb-4 pb-2 border-b-2 border-purple-200">
                     👤 Dados Pessoais

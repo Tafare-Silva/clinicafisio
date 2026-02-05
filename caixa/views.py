@@ -5,7 +5,10 @@ from django.contrib import messages
 from django.db.models import Sum, Count
 from datetime import datetime, timedelta
 from decimal import Decimal
+from django.db import transaction
 from mensalidades.models import Mensalidade
+from pacientes.models import Paciente
+from servicos.models import Servico
 from .models import Pagamento, MovimentacaoCaixa, AberturaCaixa
 from .forms import PagamentoForm, SessaoAvulsaForm, SaidaCaixaForm
 
@@ -210,90 +213,183 @@ def registrar_pagamento(request):
     caixa_aberto = AberturaCaixa.objects.filter(aberto=True).first()
     if not caixa_aberto:
         return redirect('abrir_caixa')
-    
-    mensalidade_id = request.GET.get('mensalidade_id', None)
-    
+
+    mensalidade_id = request.GET.get('mensalidade_id')
+
     if request.method == 'POST':
+        # Lê lista de mensalidades selecionadas (modo múltiplo)
+        mensalidades_ids_raw = (request.POST.get('mensalidades_ids') or '').strip()
+        mensalidades_ids = [int(x) for x in mensalidades_ids_raw.split(',') if x.strip().isdigit()]
+
         form = PagamentoForm(request.POST)
+
         if form.is_valid():
+            ajustar_proxima = request.POST.get('ajustar_proxima') == 'on'
+
+            # =========================
+            # MODO MÚLTIPLO (2+)
+            # =========================
+            if len(mensalidades_ids) >= 2:
+                if ajustar_proxima:
+                    messages.error(
+                        request,
+                        'Para pagar mais de uma mensalidade, desmarque a opção de ajustar a próxima mensalidade.'
+                    )
+                    return render(request, 'caixa/registrar_pagamento.html', {'form': form})
+
+                valor_pago_total = form.cleaned_data.get('valor_pago') or Decimal('0.00')
+                metodo = form.cleaned_data.get('metodo_pagamento')
+                obs = form.cleaned_data.get('observacoes') or ''
+
+                with transaction.atomic():
+                    # Trava as mensalidades para evitar concorrência
+                    mensalidades = list(
+                        Mensalidade.objects
+                        .select_for_update()
+                        .select_related('paciente', 'servico')
+                        .filter(id__in=mensalidades_ids, status__in=['pendente', 'parcial'])
+                    )
+
+                    # Valida se veio tudo certo
+                    if len(mensalidades) != len(set(mensalidades_ids)):
+                        messages.error(request, 'Algumas mensalidades selecionadas não são válidas ou já foram pagas.')
+                        return render(request, 'caixa/registrar_pagamento.html', {'form': form})
+
+                    # Calcula restante real (no banco) por mensalidade
+                    restante_por_id = {}
+                    total_restante = Decimal('0.00')
+
+                    for m in mensalidades:
+                        total_pago = m.pagamentos.aggregate(s=Sum('valor_pago'))['s'] or Decimal('0.00')
+                        restante = (m.valor or Decimal('0.00')) - total_pago
+
+                        if restante <= 0:
+                            messages.error(request, 'Uma das mensalidades selecionadas já está quitada.')
+                            return render(request, 'caixa/registrar_pagamento.html', {'form': form})
+
+                        restante_por_id[m.id] = restante
+                        total_restante += restante
+
+                    # Regra recomendada: em múltiplo, precisa pagar exatamente o total
+                    if valor_pago_total != total_restante:
+                        messages.error(
+                            request,
+                            f'Para pagar múltiplas mensalidades, o valor recebido deve ser exatamente `R$ {total_restante:.2f}`.'
+                        )
+                        return render(request, 'caixa/registrar_pagamento.html', {'form': form})
+
+                    # Cria 1 pagamento por mensalidade (o save() do Pagamento atualiza o status)
+                    for m in mensalidades:
+                        Pagamento.objects.create(
+                            mensalidade=m,
+                            valor_pago=restante_por_id[m.id],
+                            metodo_pagamento=metodo,
+                            observacoes=obs,
+                            caixa=caixa_aberto
+                        )
+
+                messages.success(
+                    request,
+                    f'Pagamentos registrados: {len(mensalidades_ids)} mensalidade(s). Total `R$ {total_restante:.2f}`.'
+                )
+                return redirect('dashboard_caixa')
+
+            # =========================
+            # MODO ÚNICO (0 ou 1)
+            # =========================
             pagamento = form.save(commit=False)
             pagamento.caixa = caixa_aberto
             pagamento.save()
-            
-            # Verificar se deve ajustar a próxima mensalidade
-            ajustar_proxima = request.POST.get('ajustar_proxima') == 'on'
+
             mensalidade_atual = pagamento.mensalidade
-            valor_mensalidade = mensalidade_atual.valor
-            valor_pago = pagamento.valor_pago
+            valor_mensalidade = mensalidade_atual.valor or Decimal('0.00')
+            valor_pago = pagamento.valor_pago or Decimal('0.00')
             diferenca = valor_pago - valor_mensalidade
-            
+
+            # Mantém sua lógica atual (ajustar próxima)
             if ajustar_proxima and diferenca != 0:
-                # Buscar próxima mensalidade pendente do mesmo paciente
                 proxima_mensalidade = Mensalidade.objects.filter(
                     paciente=mensalidade_atual.paciente,
                     status__in=['pendente', 'parcial'],
                     data_vencimento__gt=mensalidade_atual.data_vencimento
                 ).order_by('data_vencimento').first()
-                
+
                 if proxima_mensalidade:
                     if diferenca > 0:
-                        # Pagou a mais - abater da próxima
                         proxima_mensalidade.valor -= diferenca
-                        mensagem_ajuste = f"Crédito de R$ {diferenca:.2f} aplicado na mensalidade de {proxima_mensalidade.data_vencimento.strftime('%m/%Y')}"
+                        mensagem_ajuste = (
+                            f"Crédito de `R$ {diferenca:.2f}` aplicado na mensalidade de "
+                            f"{proxima_mensalidade.data_vencimento.strftime('%m/%Y')}"
+                        )
                     else:
-                        # Pagou a menos - adicionar na próxima
                         proxima_mensalidade.valor += abs(diferenca)
-                        mensagem_ajuste = f"Débito de R$ {abs(diferenca):.2f} adicionado na mensalidade de {proxima_mensalidade.data_vencimento.strftime('%m/%Y')}"
-                    
+                        mensagem_ajuste = (
+                            f"Débito de `R$ {abs(diferenca):.2f}` adicionado na mensalidade de "
+                            f"{proxima_mensalidade.data_vencimento.strftime('%m/%Y')}"
+                        )
+
                     proxima_mensalidade.save()
                     messages.success(request, f'Pagamento registrado! {mensagem_ajuste}')
                 else:
-                    messages.warning(request, f'Pagamento registrado, mas não há próxima mensalidade para ajustar a diferença de R$ {abs(diferenca):.2f}')
+                    messages.warning(
+                        request,
+                        f'Pagamento registrado, mas não há próxima mensalidade para ajustar a diferença de `R$ {abs(diferenca):.2f}`'
+                    )
             else:
                 messages.success(request, 'Pagamento registrado com sucesso!')
-            
+
             return redirect('dashboard_caixa')
+
     else:
         form = PagamentoForm()
         if mensalidade_id:
             try:
-                mensalidade = Mensalidade.objects.get(id=mensalidade_id)
+                mensalidade = Mensalidade.objects.select_related('paciente', 'servico').get(id=mensalidade_id)
                 form.fields['mensalidade'].initial = mensalidade
                 form.fields['valor_pago'].initial = mensalidade.valor
             except Mensalidade.DoesNotExist:
                 pass
-    
-    mensalidades_pendentes = Mensalidade.objects.filter(
-        status__in=['pendente', 'parcial']
-    ).select_related('paciente', 'servico').order_by('paciente__nome', '-data_vencimento')
-    
+
     context = {
         'form': form,
-        'mensalidades': mensalidades_pendentes,
+        'mensalidade_id_inicial': mensalidade_id or '',
     }
     return render(request, 'caixa/registrar_pagamento.html', context)
 
 def registrar_sessao_avulsa(request):
-    # Verificar se há caixa aberto
     caixa_aberto = AberturaCaixa.objects.filter(aberto=True).first()
     if not caixa_aberto:
         return redirect('abrir_caixa')
-    
+
     if request.method == 'POST':
         form = SessaoAvulsaForm(request.POST)
         if form.is_valid():
-            sessao = form.save(commit=False)
-            sessao.tipo = 'entrada'
-            sessao.categoria_entrada = 'sessao_avulsa'
-            sessao.caixa = AberturaCaixa.objects.filter(aberto=True).first()  # ← ADICIONE
-            sessao.save()
+            mov = form.save(commit=False)
+            mov.tipo = 'entrada'
+            mov.categoria_entrada = 'sessao_avulsa'
+            mov.categoria_saida = None
+            mov.caixa = caixa_aberto
+
+            # opcional: se descrição vier vazia, preencher automaticamente
+            if not mov.descricao:
+                nome_servico = mov.servico.nome if mov.servico else 'Sessão'
+                mov.descricao = f"Sessão avulsa - {nome_servico}"
+
+            mov.save()
+            messages.success(request, 'Sessão avulsa registrada com sucesso!')
             return redirect('dashboard_caixa')
     else:
         form = SessaoAvulsaForm()
-    
-    context = {'form': form}
-    return render(request, 'caixa/registrar_sessao_avulsa.html', context)
 
+    pacientes = Paciente.objects.filter(status='ativo').only('id', 'nome').order_by('nome')
+    servicos = Servico.objects.filter(ativo=True).only('id', 'nome', 'valor_padrao').order_by('tipo', 'nome')
+
+    context = {
+        'form': form,
+        'pacientes': pacientes,
+        'servicos': servicos,  # para auto-preencher valor via JS
+    }
+    return render(request, 'caixa/registrar_sessao_avulsa.html', context)
 
 def registrar_saida_caixa(request):
     # Verificar se há caixa aberto
@@ -407,13 +503,28 @@ def relatorio_fechamento_caixa(request, caixa_id):
     movimentacoes.sort(key=lambda x: x['data'])
     
     # Calcular estatísticas por método de pagamento
-    metodos_pagamento = {}
+    from collections import defaultdict
+
+        # Calcular estatísticas por método de pagamento (Pagamentos + Movimentacoes de entrada)
+    totais_por_codigo = defaultdict(Decimal)
+
+        # 1) Mensalidades (model Pagamento)
     for pag in pagamentos:
-        metodo = pag.get_metodo_pagamento_display()
-        if metodo not in metodos_pagamento:
-            metodos_pagamento[metodo] = Decimal('0')
-        metodos_pagamento[metodo] += pag.valor_pago
-    
+            totais_por_codigo[pag.metodo_pagamento] += (pag.valor_pago or Decimal('0'))
+
+        # 2) Entradas do caixa (inclui sessão avulsa e outras entradas que tenham metodo_pagamento)
+    for mov in movimentacoes_caixa.filter(tipo='entrada').exclude(metodo_pagamento__isnull=True).exclude(metodo_pagamento__exact=''):
+            totais_por_codigo[mov.metodo_pagamento] += (mov.valor or Decimal('0'))
+
+        # Unificar rótulos (Pix/PIX etc.). Preferir labels do Pagamento quando houver conflito.
+    labels = dict(MovimentacaoCaixa.METODO_PAGAMENTO_CHOICES)
+    labels.update(dict(Pagamento.METODO_CHOICES))
+
+    metodos_pagamento = {labels.get(cod, cod): total for cod, total in totais_por_codigo.items()}
+
+        # (opcional) ordenar alfabeticamente por nome do método
+    metodos_pagamento = dict(sorted(metodos_pagamento.items(), key=lambda x: x[0].lower()))
+        
     context = {
         'caixa': caixa,
         'movimentacoes': movimentacoes,
