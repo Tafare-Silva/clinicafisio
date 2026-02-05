@@ -99,11 +99,19 @@
                         <td class="px-6 py-4 text-sm text-slate-600">
                             {{ paciente.data_cadastro|date:"d/m/Y" }}
                         </td>
-                        <td class="px-6 py-4 text-sm space-x-2">
-                            <a href="{% url 'detalhes_paciente' paciente.id %}" class="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition text-xs font-medium">
-                                <i class="fas fa-eye"></i>Ver
-                            </a>
-                        </td>
+                        <td class="px-6 py-4 text-sm">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <a href="{% url 'detalhes_paciente' paciente.id %}"
+                                class="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition text-xs font-medium whitespace-nowrap leading-none">
+                                <i class="fas fa-eye"></i><span>Ver</span>
+                                </a>
+
+                                <a href="{% url 'editar_paciente' paciente.id %}"
+                                class="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-100 text-amber-800 rounded-md hover:bg-amber-200 transition text-xs font-medium whitespace-nowrap leading-none">
+                                <i class="fas fa-pen"></i><span>Editar</span>
+                                </a>
+                            </div>
+                            </td>
                     </tr>
                     {% endfor %}
                 </tbody>
